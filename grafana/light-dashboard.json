@@ -1,0 +1,272 @@
+{
+  "editable": true,
+  "panels": [
+    {
+      "id": 2,
+      "title": "Current light reading",
+      "type": "stat",
+      "description": "Latest physical USB sample within the last 10 seconds. Raw ADC counts, not calibrated lux.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "freenove-influx"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"light_readings\")\n  |> range(start: -10s, stop: now())\n  |> filter(fn: (r) => r._measurement == \"light\" and r._field == \"raw\" and r.device == \"freenove-v4.1\")\n  |> last()",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "freenove-influx"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: ADC",
+          "decimals": 0,
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "min": 0,
+          "max": 1023
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Time since last sample",
+      "type": "stat",
+      "description": "Age of the newest database measurement. Red after 5 seconds without fresh data.",
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "freenove-influx"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"light_readings\")\n  |> range(start: -30d, stop: now())\n  |> filter(fn: (r) => r._measurement == \"light\" and r._field == \"raw\" and r.device == \"freenove-v4.1\")\n  |> last()\n  |> map(fn: (r) => ({r with _time: now(), _value: float(v: uint(v: now()) - uint(v: r._time)) / 1000000000.0}))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "freenove-influx"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1,
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Sampling rate \u00b7 last 10 seconds",
+      "type": "stat",
+      "description": "Samples stored during the last 10 seconds divided by 10. Expected approximately 10 samples per second.",
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "freenove-influx"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"light_readings\")\n  |> range(start: -10s, stop: now())\n  |> filter(fn: (r) => r._measurement == \"light\" and r._field == \"raw\" and r.device == \"freenove-v4.1\")\n  |> count()\n  |> map(fn: (r) => ({r with _time: now(), _value: float(v: r._value) / 10.0}))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "freenove-influx"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: samples/s",
+          "decimals": 1,
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 1,
+      "title": "Light response over time",
+      "type": "timeseries",
+      "description": "Unsmoothed readings from A0. Cover the sensor to see a drop, then uncover it to see recovery. Gaps are not joined.",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "freenove-influx"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"light_readings\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"light\" and r._field == \"raw\" and r.device == \"freenove-v4.1\")",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "freenove-influx"
+          },
+          "maxDataPoints": 6000
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: ADC",
+          "decimals": 0,
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "min": 0,
+          "max": 1023,
+          "displayName": "Photoresistor",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "insertNulls": 2000,
+            "axisLabel": "Relative light \u00b7 ADC counts",
+            "axisPlacement": "left",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "hidden"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "text",
+      "title": "Live hardware \u00b7 how to test",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Cover the photoresistor for 3\u20135 seconds, then uncover it.** The line should drop and recover. Higher ADC values mean more light with this wiring. These are relative readings, not lux.\n\nFreenove A0 \u2192 USB / Python \u2192 Mosquitto MQTT \u2192 InfluxDB \u2192 Grafana \u00b7 **Refresh: 5 seconds** \u00b7 Keep Arduino Serial Monitor closed while Python uses COM5."
+      }
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": [
+    "Freenove",
+    "hardware",
+    "MQTT"
+  ],
+  "time": {
+    "from": "now-2m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Freenove \u2022 Light Measurement Workstation",
+  "uid": "freenove-light",
+  "version": 0,
+  "liveNow": true
+}
